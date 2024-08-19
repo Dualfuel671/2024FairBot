@@ -110,10 +110,10 @@ public class RobotContainer {
         private Command runAuto = drivetrain.getAutoPath("test");
 
         public RobotContainer() {
-                configureBindings();
+
         }
 
-        private void configureBindings() {
+        public void configureDefaultBindings() {
 
                 final Command groundIntaking = new SequentialCommandGroup(new SetWristState(wrist, WristState.Intaking),
                                 new WaitCommand(.1), new SetArmState(arm, ArmState.Intaking),
@@ -206,6 +206,117 @@ public class RobotContainer {
                 operatorSquareButton.onFalse(new InstantCommand(() -> intake.setIntakeState(IntakeState.Standby)));
                 
 
+                operatorBottomPov.onTrue(groundIntaking);
+
+                operatorLeftPov.onTrue(amping);
+
+                driverCrossButton.whileTrue(drivetrain.applyRequest(() -> brake));
+
+                driverSquareButton.whileTrue(drivetrain
+                                .applyRequest(() -> point.withModuleDirection(
+                                                new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))));
+                driverOptionsButton.onTrue(
+                                new InstantCommand(drivetrain::tareEverything));
+
+                if (Utils.isSimulation()) {
+                        drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+                }
+                drivetrain.registerTelemetry(logger::telemeterize);
+        }
+
+         public void configureSterlingBindings() {
+
+                final Command groundIntaking = new SequentialCommandGroup(new SetWristState(wrist, WristState.Intaking),
+                                new WaitCommand(.1), new SetArmState(arm, ArmState.Intaking),
+                                new IntakeUntilTripped(intake), new SetArmState(arm, ArmState.Standby),
+                                new WaitCommand(.3), new SetWristState(wrist, WristState.Standby));
+
+                final Command standbyArmAndWrist = new SequentialCommandGroup(new SetArmState(arm, ArmState.Standby),
+                                new WaitCommand(.3), new SetWristState(wrist, WristState.Standby));
+
+                final Command amping = new SequentialCommandGroup(new IntakeUntilTripped(intake),
+                                new IntakeUntilTripped(intake),
+                                new ParallelCommandGroup(new SetShooterState(shooter, ShooterState.Amping),
+                                                new SetArmState(arm, ArmState.Amping),
+                                                new SetWristState(wrist, WristState.Amping)),
+                                new WaitCommand(.4),
+                                new IntakeFeed(intake),
+                                new WaitCommand(.2),
+                                new ParallelCommandGroup(new SetShooterState(shooter, ShooterState.Standby),
+                                                new SetArmState(arm, ArmState.Standby),
+                                                new SetWristState(wrist, WristState.Standby)));
+
+                final Command sourceIntaking = new SequentialCommandGroup(
+                                new ParallelCommandGroup(new SetArmState(arm, ArmState.Sourcing),
+                                                new SetWristState(wrist, WristState.Sourcing),
+                                                new IntakeUntilTripped(intake)),
+                                new ParallelCommandGroup(new SetArmState(arm, ArmState.Standby),
+                                                new SetWristState(wrist, WristState.Standby)));
+
+                final Command speakerShot = new SequentialCommandGroup(
+                                new ParallelCommandGroup(new SetShooterState(shooter, ShooterState.Shooting),
+                                                new SetArmState(arm, ArmState.Standby),
+                                                new SetWristState(wrist, WristState.SpeakerShot)),
+                                new WaitCommand(.4),
+                                new IntakeFeed(intake),
+                                new WaitCommand(.2),
+                                new ParallelCommandGroup(new SetShooterState(shooter, ShooterState.Standby),
+                                                new SetArmState(arm, ArmState.Standby),
+                                                new SetWristState(wrist, WristState.Standby)));
+
+                final Command portClimbUp = new SetClimbState(portClimb, ClimbState.ClimbUp);
+
+                final Command portClimbDown = new SetClimbState(portClimb, ClimbState.ClimbDown);
+
+                final Command portClimbStandby = new SetClimbState(portClimb, ClimbState.Standby);
+
+                final Command starboardClimbUp = new SetClimbState(starboardClimb, ClimbState.ClimbUp);
+
+                final Command starboardClimbDown = new SetClimbState(starboardClimb, ClimbState.ClimbDown);
+
+                final Command starboardClimbStandby = new SetClimbState(starboardClimb, ClimbState.Standby);
+
+                operatorLeftTriggerButton.onTrue(portClimbUp);
+
+                operatorLeftTriggerButton.onFalse(portClimbStandby);
+
+                operatorLeftBumper.onTrue(portClimbDown);
+
+                operatorLeftBumper.onFalse(portClimbStandby);
+
+                operatorRightTriggerButton.onTrue(starboardClimbUp);
+
+                operatorRightTriggerButton.onFalse(starboardClimbStandby);
+
+                operatorRightBumper.onTrue(starboardClimbDown);
+
+                operatorRightBumper.onFalse(starboardClimbStandby);
+
+                operatorTopPov.onTrue(sourceIntaking);
+
+                operatorRightPov.onTrue(speakerShot);
+
+                //operatorTriangle.onTrue(portClimbUp); // Test operator Triangle button for port climb up
+                //operatorTriangle.onFalse(portClimbStandby); //Test 
+        
+
+                drivetrain.setDefaultCommand(
+                                drivetrain.applyRequest(() -> drive
+                                                .withVelocityX(-(driver.getRightY() * driver.getRightY()
+                                                                * Math.signum(driver.getRightY())) * MaxSpeed)
+                                                .withVelocityY(-(driver.getRightX() * driver.getRightX()
+                                                                * Math.signum(driver.getRightX())) * MaxSpeed)
+                                                .withRotationalRate(-(driver.getLeftX() * driver.getLeftX()
+                                                                * Math.signum(driver.getLeftX())) * MaxAngularRate)));
+
+                operatorCircleButton.onTrue(standbyArmAndWrist);
+                // can the operatorSquareButton be used to run the public enum IntakeState Outtaking command when pressed
+                //aug17BPJ outtaking
+                operatorSquareButton.onTrue(new InstantCommand(() -> intake.setIntakeState(IntakeState.Outtaking)));
+                //19augBPJ wont stop outtaking need an onfalse
+                operatorSquareButton.onFalse(new InstantCommand(() -> intake.setIntakeState(IntakeState.Standby)));
+                
+
                 
 
                 operatorBottomPov.onTrue(groundIntaking);
@@ -224,6 +335,10 @@ public class RobotContainer {
                         drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
                 }
                 drivetrain.registerTelemetry(logger::telemeterize);
+        }
+
+         public void configureTestBindings() {
+
         }
 
         public Command getAutonomousCommand() {

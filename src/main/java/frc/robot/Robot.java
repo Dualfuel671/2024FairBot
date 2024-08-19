@@ -63,6 +63,21 @@ public class Robot extends TimedRobot {
   @Override
   public void testInit() {
     CommandScheduler.getInstance().cancelAll();
+    
+    switch (NetworkTables.getControllerMode()) {
+      case "stirfry":
+      m_robotContainer.configureSterlingBindings();
+              break;
+
+      case "test":
+      m_robotContainer.configureTestBindings();
+              break;
+
+      default:
+      m_robotContainer.configureDefaultBindings();
+              break;
+}
+
   }
 
   @Override
